@@ -1,0 +1,79 @@
+\section{Introduction}
+
+
+
+\left|\mathbf{A}_{i}^{T}\mathbf{A}_{j}\right|<1\mbox{ for all }i\ne j
+
+
+$L_{1}$-regularized regression, and in particular the LASSO, has
+become popular because it is able to produce sparse, yet globally
+optimal solutions in a natural way, i.e. without explicit enforcement
+of sparsity. In the LASSO problem, a regression problem of the form
+\begin{equation}
+\textrm{minimize}_{\mathbf{x}}\left\Vert \mathbf{b}-\mathbf{Ax}\right\Vert _{2}^{2}\quad\textrm{subject to}\quad\left\Vert \mathbf{x}\right\Vert _{1}\le\lambda\label{eq:lasso-problem}
+\end{equation}
+with design ??? matrix $\mathbf{A}$ of size $m\times n$, response
+vector $\mathbf{b}$ of length $m$ and regularization parameter $\lambda\ge0$.
+Note that the constraint is based on the $L_{1}$-norm. We shall assume
+throughout the paper that the data have been normalized such that
+\begin{equation}
+\textrm{for all columns }\mathbf{A}_{i}\mbox{ of }\mathbf{A}:\quad\mathbf{A}_{i}^{T}\mathbf{A}_{i}=1\label{eq:normalization}
+\end{equation}
+Moreover, two columns $\mathbf{A}_{i}$ and $\mathbf{A}_{j}$ of $\mathbf{A}$
+are not allowed to be exactly parallel or anti-parallel:
+
+
+It is not necessary to centralize the data because this property is
+not needed in the derivations - check this??? The optimal solution
+$\tilde{\mathbf{x}}$ is obviously a function $\tilde{\mathbf{x}}\left(\lambda\right)$
+of the regularization parameter. The only possible solution for $\lambda=0$
+is clearly $\mathbf{\tilde{x}}=\mathbf{0}$, whereas the LASSO problem
+reduces to the ordinary unconstrained least squares problem for $\lambda\rightarrow\infty$.
+Between these extremes (i.e. for sufficiently small $\lambda>0$),
+the $L_{1}$-regularization constraint tends to enforce sparse solution
+vectors where many of the variables $\tilde{x}_{i}$ are zero. Sparse
+solutions to regression problems are often desirable because they
+allow for a compact representation of the solution. This is especially
+important for highly overdetermined systems (i.e. when $n\gg m$)
+because sparsity has the effect of selecting the most relevant explanatory
+variables among a potentially large number of candidates. 
+
+
+Originally, solving a LASSO problem required sophisticated and computationally
+expensive quadratic programming methods. However, this changed with
+the recent introduction of \emph{least angle regression} (LARS) \cite{efron-04-least}
+which made it possible to compute an entire family of LASSO solutions
+(i.e. for increasing values of $\lambda$) with the same computational
+complexity as that of a single unconstrained least squares solution.
+The key insight of the LARS algorithm is the fact that the solution
+vector $\tilde{\mathbf{x}}\left(\lambda\right)$ is a piecewise linear
+function of the regularization parameter, and the knots of this solution
+polygon occur precisely at those values of $\lambda$ where a variable
+$x_{i}$ enters of leaves the ``active set'' of non-zero variables.
+The set $\left\{ \lambda_{k}\right\} $ of these values and the associated
+solution vectors $\tilde{\mathbf{x}}\left(\lambda_{k}\right)$ can
+be computed analytically and efficiently. 
+
+
+A thourough theoretical analysis of this idea was given in the original
+article \cite{efron-04-least} and the accompanying discussion. However,
+the focus of this presentation is mainly mathematical, whereas a dedicated
+description of the algorithmic side of the LARS method is missing.
+Issues like efficient incremental computation of the solution, numerical
+stability and termination conditions are not discussed in detail.
+The present paper attempts to fill this gap.
+
+
+Besides our own research, our paper is built upon two sources: First,
+the discussion contribution \cite{turlach-04-discussion} translated
+the basic LARS description (without LASSO and non-negativity extensions)
+into an explicit algorithmic form and thereby demonstrated significant
+simplifications of the formulas from the original paper. Unfortunately,
+the pseudo-code contains a number of serious typos and had to be fixed.
+Second, the source code of the inventors' original R implementation
+provided very valuable information about numerical tolerances and
+served as a reference during testing. However, this implementation
+wasn't without errors either.
+
+
+??? variable selection

@@ -1,0 +1,368 @@
+\section{The Basic LARS Algorithm}
+
+
+\subsection{Mathematical Derivation}
+
+
+When the solution of problem (\ref{eq:lasso-problem}) is computed
+incrementally, one always starts with the known solution $\tilde{\mathbf{x}}\left(\lambda=0\right)\equiv\mathbf{0}$,
+i.e. an empty active set. Variables are then successively added to
+the active set. However, it is also occasionally necessary to remove
+a variable from the active set which complicates the algorithm. The
+basic LARS (``Least Angle Regression'') algorithm is simplified
+by ignoring this possibility, i.e. by only allowing additions to the
+active set. Consequently, the resulting solution is no longer a solution
+to the original problem (\ref{eq:lasso-problem}) but to a modified
+problem which is not straightforward to formalize. Nevertheless, it
+is useful to look at the simplified algorithm in order to understand
+some basic principles. In the sequel, we give a new derivation of
+the theory which lends itself much better to the compuational relization
+than the original derivation.
+
+
+Let us first analyse the simplest case where only one variable (say
+$x_{i}$) is non-zero. Then, problem (\ref{eq:lasso-problem}) simplifies
+to
+\begin{equation}
+\textrm{minimize}_{x_{i}}\,\left\Vert \mathbf{b}-\mathbf{A}_{i}x_{i}\right\Vert _{2}^{2}\quad\textrm{subject to}\quad\left|x_{i}\right|\le\lambda
+\end{equation}
+The unconstrained solution (which is equivalent to taking the limit
+$\lambda\rightarrow\infty$) is $\hat{x}_{i}=\mathbf{A}_{i}^{T}\mathbf{b}$
+(recall that $\mathbf{A}_{i}^{T}\mathbf{A}_{i}=1$ due to normalization).
+This is also the solution $\tilde{x}_{i}(\lambda)$ of the constrained
+problem as long as $\lambda\ge\left|\mathbf{A}_{i}^{T}\mathbf{b}\right|$.
+Otherwise, $\tilde{x}_{i}$ has to be smaller in order to fulfill
+the constraint. By making $\tilde{x}_{i}$ as large as possible, we
+get
+
+
+\begin{equation}
+\tilde{x}_{i}\left(\lambda\right)=\begin{cases}
+\lambda\sign\left(\mathbf{A}_{i}^{T}\mathbf{b}\right) & \mbox{ if }\lambda<\left|\mathbf{A}_{i}^{T}\mathbf{b}\right|\\
+\mathbf{A}_{i}^{T}\mathbf{b} & \mbox{ otherwise}
+\end{cases}\label{eq:one-variable-solution}
+\end{equation}
+The solution $\tilde{x}_{i}\left(\lambda\right)$ is initially a linear
+function of $\lambda$ and then becomes a constant function, i.e.
+the solution path is piecewise linear. It will turn out later that
+this property still holds when the active set becomes more interesting.
+The corresponding residual is
+\begin{equation}
+\left\Vert \mathbf{r}^{(1)}\left(\lambda\right)\right\Vert _{2}^{2}=\left\Vert \mathbf{b}-\mathbf{A}_{i}\tilde{x}_{i}\left(\lambda\right)\right\Vert ^{2}=\begin{cases}
+\mathbf{b}^{T}\mathbf{b}+\lambda^{2}-2\lambda\left|\mathbf{A}_{i}^{T}\mathbf{b}\right| & \mbox{ if }\lambda<\left|\mathbf{A}_{i}^{T}\mathbf{b}\right|\\
+\mathbf{b}^{T}\mathbf{b}-\left|\mathbf{A}_{i}^{T}\mathbf{b}\right|^{2} & \mbox{ otherwise}
+\end{cases}
+\end{equation}
+where $\mathbf{r}^{(1)}$ is the residual vector for the one-variable
+active set. Irrespective of $\lambda$, the residual $\left\Vert \mathbf{r}^{(1)}\right\Vert _{2}^{2}$
+is minimal when $\left|\mathbf{A}_{i}^{T}\mathbf{b}\right|$ is maximized.
+That is, we must choose the column $i$ which maximizes the absolute
+value of the correlation $c_{i}=\mathbf{A}_{i}^{T}\mathbf{b}$. This
+choice defines the initial step of the LARS algorithm. In order to
+simplify the subsequent presentation (and the algorithm), we will
+reorder the columns of $\mathbf{A}$ so that the active indices are
+on the left, i.e. $x_{i}$ becomes $x_{1}$.
+
+
+We now turn to the case were the active set contains two variables,
+i.e. $\mathbf{q}=\left[x_{1},x_{2}\right]^{T}$ and $\mathbf{Q}=\left[\mathbf{A}_{1},\mathbf{A}_{2}\right]$
+after reordering of columns. Problem (\ref{eq:lasso-problem}) becomes
+\begin{equation}
+\textrm{minimize}_{x_{1},x_{2}}\,\left\Vert \mathbf{b}-\mathbf{A}_{1}x_{1}-\mathbf{A}_{2}x_{2}\right\Vert _{2}^{2}\quad\textrm{subject to}\quad\left|x_{1}\right|+\left|x_{2}\right|\le\lambda
+\end{equation}
+The unconstrained solution can be computed by the pseudo-inverse $\mathbf{Q}^{+}=\left(\mathbf{Q}^{T}\mathbf{Q}\right)^{-1}\mathbf{Q}^{T}$:
+\begin{equation}
+\left[\hat{x}_{1},\hat{x}_{2}\right]^{T}=\hat{\mathbf{q}}=\mathbf{Q}^{+}\mathbf{b}
+\end{equation}
+and the corresponding residual vector is $\hat{\mathbf{r}}^{(2)}=\mathbf{b}-\mathbf{Q}\mathbf{\hat{q}}$.
+This solution remains optimal in the constrained problem as long as
+$\left\Vert \mathbf{\hat{q}}\right\Vert _{1}\le\lambda$. When $\lambda$
+gets smaller, i.e. $\lambda=\left\Vert \mathbf{\hat{q}}\right\Vert _{1}-\Delta\lambda$
+(with $\Delta\lambda>0$), we must reduce the absolute values of $x_{1}$
+and $x_{2}$ in such a way that the residual is increased as little
+as possible. By setting $\tilde{x}_{i}=\hat{x}_{i}-\xi_{i}$ with
+$\left|\xi_{1}\right|+\left|\xi_{2}\right|=\Delta\lambda$ (where
+we choose signs so that $\sign\left(\xi_{i}\right)=\sign\left(\hat{x}_{i}\right)$),
+we can express this requirement by an optimization problem in $\xi_{1}$
+and $\xi_{2}$:
+\begin{equation}
+\textrm{minimize}_{\xi_{1},\xi_{2},\mu}\,\left\Vert \hat{\mathbf{r}}^{(2)}+\mathbf{A}_{1}\xi_{1}+\mathbf{A}_{2}\xi_{2}\right\Vert _{2}^{2}+\mu\left(\left|\xi_{1}\right|+\left|\xi_{2}\right|-\Delta\lambda\right)
+\end{equation}
+where $\mu$ is a Langrange multiplier. Setting the derivatives w.r.t.
+$\xi_{1,2}$ and $\mu$ to zero, we get the system of equations
+\begin{eqnarray}
+\mathbf{A}_{1}^{T}\left(\mathbf{A}_{1}\xi_{1}+\mathbf{A}_{2}\xi_{2}\right)+\mu\sign\left(\hat{x}_{1}\right) & = & 0\nonumber \\
+\mathbf{A}_{2}^{T}\left(\mathbf{A}_{1}\xi_{1}+\mathbf{A}_{2}\xi_{2}\right)+\mu\sign\left(\hat{x}_{2}\right) & = & 0\label{eq:sytem-A2}\\
+\left|\xi_{1}\right|+\left|\xi_{2}\right|-\Delta\lambda & = & 0\nonumber 
+\end{eqnarray}
+where we made use of the property $\mathbf{A}_{i}^{T}\hat{\mathbf{r}}^{(2)}=0$
+which holds because $\hat{\mathbf{r}}^{(2)}$ is the residual of the
+unconstrained least squares solution. By combining the first two equations,
+we find 
+\begin{equation}
+\left|\mathbf{A}_{1}^{T}\left(\mathbf{A}_{1}\xi_{1}+\mathbf{A}_{2}\xi_{2}\right)\right|=\left|\mathbf{A}_{2}^{T}\left(\mathbf{A}_{1}\xi_{1}+\mathbf{A}_{2}\xi_{2}\right)\right|\label{eq:equal-angle-A2}
+\end{equation}
+That is, the vector $\Delta\mathbf{r}=\mathbf{A}_{1}\xi_{1}+\mathbf{A}_{2}\xi_{2}$
+must point away from the unconstrained optimum $\mathbf{Q}\mathbf{\hat{q}}$
+in a direction such that its angle with both $\mathbf{A}_{1}$ and
+$\mathbf{A}_{2}$ is equal. This is a crucial property which later
+becomes the key for efficient computation of the values of $\lambda$
+where the active set changes. The solution of the system (\ref{eq:sytem-A2})
+is 
+\begin{equation}
+\xi_{1}=\sign\left(\hat{x}_{1}\right)\frac{\Delta\lambda}{2},\qquad\xi_{2}=\sign\left(\hat{x}_{2}\right)\frac{\Delta\lambda}{2}
+\end{equation}
+This means that $\left|\xi_{1}\right|=\left|\xi_{2}\right|=\frac{\Delta\lambda}{2}$,
+i.e. the required decrease in the solution's $L_{1}$-norm is achieved
+by equal contributions from both variables. Suppose without loss of
+generality that $\left|\hat{x}_{1}\right|\ge\left|\hat{x}_{2}\right|$.
+Then, as $\Delta\lambda$ grows, $\tilde{x}_{2}$ will eventually
+become zero. At this point, column $\mathbf{A}_{2}$ doesn't contribute
+to the reduction of the residual, but neither does variable $\tilde{x}_{2}$
+contribute to the constraint. It is now easy to see that we should
+no longer follow direction $\Delta\mathbf{r}$ when $\lambda$ is
+further reduced, because $\mathbf{A}_{2}\tilde{x}_{2}$ would otherwise
+start to increase the residual rather than reducing it, whereas $\left|\tilde{x}_{2}\right|$
+``consumes'' valuable contraint. It is better to remove $\tilde{x}_{2}$
+from the active set and give all available ``constraint leeway''
+to variable $\tilde{x}_{1}$ which actually does reduce the residual.
+better explanation??? The resulting solution path for $\tilde{x}_{2}$
+therefore becomes
+
+
+\begin{eqnarray}
+\tilde{x}_{2}(\lambda) & = & \begin{cases}
+0 & \mbox{\textrm{ if }}\lambda\le\left|\hat{x}_{1}\right|-\left|\hat{x}_{2}\right|\\
+\frac{\lambda-\left(\left|\hat{x}_{1}\right|-\left|\hat{x}_{2}\right|\right)}{2}\sign\left(\hat{x}_{2}\right) & \textrm{ if }\left|\hat{x}_{1}\right|-\left|\hat{x}_{2}\right|\le\lambda\le\left|\hat{x}_{1}\right|+\left|\hat{x}_{2}\right|\\
+\hat{x}_{2} & \textrm{ otherwise}
+\end{cases}
+\end{eqnarray}
+This is again a piecewise linear function of $\lambda$. The solution
+for $\tilde{x}_{1}$ can be obtained from the difference between $\lambda$
+and $\left|\tilde{x}_{2}\right|$ with appropriate sign:
+\begin{eqnarray}
+\tilde{x}_{1}(\lambda) & = & \begin{cases}
+\lambda\sign\left(\hat{x}_{1}\right) & \mbox{\textrm{ if }}\lambda\le\left|\hat{x}_{1}\right|-\left|\hat{x}_{2}\right|\\
+\frac{\lambda+\left(\left|\hat{x}_{1}\right|-\left|\hat{x}_{2}\right|\right)}{2}\sign\left(\hat{x}_{1}\right) & \textrm{ if }\left|\hat{x}_{1}\right|-\left|\hat{x}_{2}\right|\le\lambda\le\left|\hat{x}_{1}\right|+\left|\hat{x}_{2}\right|\\
+\hat{x}_{1} & \textrm{ otherwise}
+\end{cases}
+\end{eqnarray}
+Figure??? We note that the solution for $\lambda\le\left|\hat{x}_{1}\right|-\left|\hat{x}_{2}\right|$
+is identical to the solution (\ref{eq:one-variable-solution}) for
+the one-variable active set. This suggests the possibility of computing
+solutions incrementally: The solution for an active set of size $k$
+will be derived from the solution for the active set of size $k-1$. 
+
+
+This is the key insight of \cite{efron-04-least} for the efficient
+solution of the LARS problem. Let $\mathbf{\tilde{q}}^{(k)}\left(\lambda\right)$
+be the solution path for an active set with at most $k$ variables,
+$\mathbf{\hat{q}}^{(k)}=\mathbf{\tilde{q}}^{(k)}\left(\lambda\rightarrow\infty\right)$
+the corresponding unconstrained solution, and $\hat{\mathbf{r}}^{(k)}$
+the residual vector of that solution. Furthermore, let $\lambda_{k}$
+be the value of $\lambda$ where variable $k$ enters the active set,
+i.e. $\lambda_{k}$ is the smallest value such that $\tilde{x}_{k}\left(\lambda_{k}+\epsilon\right)\ne0$
+for all $\epsilon>0$. Sort the indices so that $\left|\hat{x}_{1}^{(k)}\right|\ge\left|\hat{x}_{2}^{(k)}\right|\ge...\left|\hat{x}_{k}^{(k)}\right|$.
+As before, the unconstrained solution remains optimal in the constrained
+problem as long as $\lambda\ge\left\Vert \hat{\mathbf{q}}^{(k)}\right\Vert _{1}$.
+To find the optimal solution for slightly smaller $\lambda$, we again
+set $\lambda=\left\Vert \hat{\mathbf{q}}^{(k)}\right\Vert _{1}-\Delta\lambda$
+and $\tilde{x}_{i}=\hat{x}_{i}-\xi_{i}$. The $\xi_{i}$ can be determined
+by means of the optimization problem 
+\begin{equation}
+\textrm{minimize}_{\xi_{i},\mu}\,\left\Vert \hat{\mathbf{r}}^{(k)}+\sum_{i}\mathbf{A}_{i}\xi_{i}\right\Vert _{2}^{2}+\mu\left(\sum_{i}\left|\xi_{i}\right|-\Delta\lambda\right)
+\end{equation}
+This problem is solved in the same way as in the two-variable case.
+We arrive at the solution 
+\begin{equation}
+\xi_{i}=\frac{\Delta\lambda}{k}\sign\left(\hat{x}_{i}^{(k)}\right)
+\end{equation}
+The equal angle condition (\ref{eq:equal-angle-A2}) generalizes to
+\begin{equation}
+\forall i,j\le k:\quad\left|\mathbf{A}_{i}^{T}\left(\sum_{i}\mathbf{A}_{i}\xi_{i}\right)\right|=\left|\mathbf{A}_{j}^{T}\left(\sum_{i}\mathbf{A}_{i}\xi_{i}\right)\right|\label{eq:equal-angle}
+\end{equation}
+Variable $\tilde{x}_{k}^{(k)}\left(\lambda\right)$ becomes zero at
+$\lambda_{k}=\left\Vert \hat{\mathbf{q}}^{(k)}\right\Vert _{1}-k\left|\hat{x}_{k}^{(k)}\right|$.
+For smaller $\lambda$, the optimal solution is $\tilde{x}_{k}^{(k)}\left(\lambda\right)=0$.
+This leads to the solution path
+\begin{eqnarray}
+\tilde{x}_{k}^{(k)}\left(\lambda\right) & = & \begin{cases}
+0 & \mbox{\textrm{ if }}\lambda\le\lambda_{k}\\
+\frac{\lambda-\lambda_{k}}{k}\sign\left(\hat{x}_{k}^{(k)}\right) & \mbox{ if }\lambda_{k}\le\lambda\le\left\Vert \hat{\mathbf{q}}^{(k)}\right\Vert _{1}\\
+\hat{x}_{k}^{(k)} & \mbox{ otherwise}
+\end{cases}\nonumber \\
+\\
+\tilde{x}_{i<k}^{(k)}\left(\lambda\right) & = & \begin{cases}
+\tilde{x}_{i}^{(k-1)}\left(\lambda\right) & \mbox{\textrm{ if }}\lambda\le\lambda_{k}\\
+\tilde{x}_{i}^{(k-1)}\left(\lambda_{k}\right)+\frac{\lambda-\lambda_{k}}{k}\sign\left(\hat{x}_{i}^{(k)}\right) & \mbox{ if }\lambda_{k}\le\lambda\le\left\Vert \hat{\mathbf{q}}^{(k)}\right\Vert _{1}\\
+\hat{x}_{i}^{(k)} & \mbox{ otherwise}
+\end{cases}\nonumber 
+\end{eqnarray}
+However, this formulation of the solution has a disadvantage that
+prevents it from being efficiently computed: The unconstrained solution
+$\hat{\mathbf{q}}^{(k)}$ for the new active set is needed in order
+to compute $\lambda_{k}$. This is a problem, because we do not know
+in advance which of the $\left(n-k+1\right)$ inactive candidate variables
+should be added to the $(k-1)$-variable active set, i.e. which variable
+should be moved to position $k$. We must select the variable that
+leads to the smallest $\lambda_{k}$ among all candidates. why???
+To identify this variable with the above formulas, we would have to
+solve $\left(n-k+1\right)$ least squares problems which is clearly
+inefficient. 
+
+
+Fortunately, we can take advantage of the equal angle condition (\ref{eq:equal-angle})
+to determine the value of $\lambda_{k}$ for all candidates by much
+cheaper correlation computations. The main goal of the following derivation
+are simplified versions of formulas (2.13) and (2.14) in \cite{efron-04-least}.
+We are going to determine $\lambda_{k}$, $\tilde{\mathbf{x}}\left(\lambda_{k}\right)$
+(the point where variable $k$ enters the active set) and $\hat{\mathbf{x}}^{(k)}$
+(the least squares solution for the $k$-variable active set) under
+the assumption that the corresponding quantities $\lambda_{k-1}$,
+$\tilde{\mathbf{x}}\left(\lambda_{k-1}\right)$ and $\hat{\mathbf{x}}^{(k-1)}$
+for the $\left(k-1\right)$-variable active set are already known.
+This implies that the residual vectors $\tilde{\mathbf{r}}\left(\lambda_{k-1}\right)=\mathbf{b}-\mathbf{Q}^{(k-1)}\tilde{\mathbf{x}}\left(\lambda_{k-1}\right)$
+and $\hat{\mathbf{r}}^{(k-1)}=\mathbf{b}-\mathbf{Q}^{(k-1)}\hat{\mathbf{x}}^{(k-1)}$
+are efficiently computable. 
+
+
+
+c_{i}=\mathbf{A}_{i}^{T}\tilde{\mathbf{r}}\left(\lambda_{k-1}\right)\quad\mbox{and}\quad\rho_{i}=\mathbf{A}_{i}^{T}\hat{\mathbf{r}}^{(k-1)}
+
+
+Consider how the solution path proceeds after the point $\tilde{\mathbf{x}}\left(\lambda_{k-1}\right)$:
+It first continues in the direction toward $\hat{\mathbf{x}}^{(k-1)}$
+until the point $\tilde{\mathbf{x}}\left(\lambda_{k}\right)$ is reached.
+Here, the direction changes and the path continues toward $\hat{\mathbf{x}}^{(k)}$.
+By defining the \emph{path vectors} $\mathbf{p}^{(k-1)}=\hat{\mathbf{x}}^{(k-1)}-\tilde{\mathbf{x}}\left(\lambda_{k-1}\right)$
+and $\mathbf{p}^{(k)}=\hat{\mathbf{x}}^{(k)}-\tilde{\mathbf{x}}\left(\lambda_{k}\right)$,
+we can write
+\begin{eqnarray}
+\tilde{\mathbf{x}}\left(\lambda_{k}\right) & = & \tilde{\mathbf{x}}\left(\lambda_{k-1}\right)+\gamma\,\mathbf{p}^{(k-1)}\nonumber \\
+ & = & \left(1-\gamma\right)\tilde{\mathbf{x}}\left(\lambda_{k-1}\right)+\gamma\,\hat{\mathbf{x}}^{(k-1)}\label{eq:path-vector}
+\end{eqnarray}
+for some parameter $\gamma$ (in the range $0\le\gamma\le1$) to be
+determined. The equal angle condition (\ref{eq:equal-angle}) can
+be rewritten in terms of the path vector $\mathbf{p}^{(k)}$ as
+\begin{equation}
+\forall i,j\le k:\quad\left|\mathbf{A}_{i}^{T}\mathbf{Q}^{(k)}\mathbf{p}^{(k)}\right|=\left|\mathbf{A}_{j}^{T}\mathbf{Q}^{(k)}\mathbf{p}^{(k)}\right|
+\end{equation}
+where $\mathbf{Q}^{(k)}=\left[\mathbf{A}_{1},...,\mathbf{A}_{k}\right]$
+as before. Since $\hat{\mathbf{x}}^{(k)}$ is the least squares solution
+for the $k$-variable active set, the residual vector $\hat{\mathbf{r}}^{(k)}$
+is orthogonal to the space spanned by the columns of $\mathbf{Q}^{(k)}$,
+so that 
+\begin{equation}
+\forall i\le k:\quad\mathbf{A}_{i}^{T}\hat{\mathbf{r}}^{(k)}=0
+\end{equation}
+We can therefore transform the equal angle condition into
+\begin{equation}
+\forall i,j\le k:\quad\left|\mathbf{A}_{i}^{T}\left(\mathbf{Q}^{(k)}\mathbf{p}^{(k)}+\hat{\mathbf{r}}^{(k)}\right)\right|=\left|\mathbf{A}_{j}^{T}\left(\mathbf{Q}^{(k)}\mathbf{p}^{(k)}+\hat{\mathbf{r}}^{(k)}\right)\right|
+\end{equation}
+On the other hand, we have by construction of the solution path 
+\begin{eqnarray*}
+\mathbf{Q}^{(k)}\tilde{\mathbf{x}}\left(\lambda_{k}\right)+\mathbf{Q}^{(k)}\mathbf{p}^{(k)}+\hat{\mathbf{r}}^{(k)} & = & \mathbf{b}\\
+ & = & \mathbf{Q}^{(k)}\tilde{\mathbf{x}}\left(\lambda_{k-1}\right)+\mathbf{Q}^{(k)}\mathbf{p}^{(k-1)}+\hat{\mathbf{r}}^{(k-1)}
+\end{eqnarray*}
+Inserting (\ref{eq:path-vector}) and rearranging gives
+\begin{eqnarray*}
+\mathbf{Q}^{(k)}\mathbf{p}^{(k)}+\hat{\mathbf{r}}^{(k)} & = & \mathbf{b}-\mathbf{Q}^{(k)}\tilde{\mathbf{x}}\left(\lambda_{k-1}\right)-\gamma\left(\mathbf{b}-\mathbf{Q}^{(k)}\tilde{\mathbf{x}}\left(\lambda_{k-1}\right)-\hat{\mathbf{r}}^{(k-1)}\right)\\
+ & = & \tilde{\mathbf{r}}\left(\lambda_{k-1}\right)-\gamma\left(\tilde{\mathbf{r}}\left(\lambda_{k-1}\right)-\hat{\mathbf{r}}^{(k-1)}\right)
+\end{eqnarray*}
+We can therefore express the equal angle condition in terms of known
+residuals and unknown $\gamma$ as
+\begin{eqnarray*}
+\lefteqn{\forall i,j\le k:\quad\left|\mathbf{A}_{i}^{T}\left[\tilde{\mathbf{r}}\left(\lambda_{k-1}\right)-\gamma\left(\tilde{\mathbf{r}}\left(\lambda_{k-1}\right)-\hat{\mathbf{r}}^{(k-1)}\right)\right]\right|}\\
+ & = & \left|\mathbf{A}_{j}^{T}\left[\tilde{\mathbf{r}}\left(\lambda_{k-1}\right)-\gamma\left(\tilde{\mathbf{r}}\left(\lambda_{k-1}\right)-\hat{\mathbf{r}}^{(k-1)}\right)\right]\right|
+\end{eqnarray*}
+By introducing the abbreviations
+
+
+
+\forall i,j\le k:\quad\left|c_{i}-\gamma\left(c_{i}-\rho_{i}\right)\right|=\left|c_{j}-\gamma\left(c_{j}-\rho_{j}\right)\right|
+
+
+for the correlations between the columns of $\mathbf{A}$ and the
+residual vectors, this becomes
+
+
+
+\forall i,j\le k-1:\quad\left|\mathbf{A}_{i}^{T}\left(\mathbf{Q}^{(k-1)}\mathbf{p}^{(k-1)}+\hat{\mathbf{r}}^{(k-1)}\right)\right|=\left|\mathbf{A}_{j}^{T}\left(\mathbf{Q}^{(k-1)}\mathbf{p}^{(k-1)}+\hat{\mathbf{r}}^{(k-1)}\right)\right|
+
+
+This can be further simplified by noting that for all $i<k$ we have
+$\rho_{i}=0$ because $\hat{\mathbf{r}}^{(k-1)}$ is the least squares
+residual of the first $\left(k-1\right)$ variables. Furthermore,
+the equal angle condition of the previous algorithm step (the one
+to determine the $\left(k-1\right)$-variable active set) reads
+
+
+But this is identical to $\left|\mathbf{A}_{i}^{T}\tilde{\mathbf{r}}\left(\lambda_{k-1}\right)\right|=\mbox{const}$
+which means that
+\begin{equation}
+\forall i\le k-1:\quad\left|c_{i}\right|=\mathrm{const}=C
+\end{equation}
+Thus, the only interesting index on the right hand side is $j=k$,
+and the equal angle condition becomes
+\begin{equation}
+C\left|1-\gamma\right|=\left|c_{k}-\gamma\left(c_{k}-\rho_{k}\right)\right|
+\end{equation}
+Since $\gamma$ is restricted to the range $\left[0,1\right]$ we
+can drop the absolute value sign on the left hand side. To resolve
+the absolute values on the right hand side, we distinguish three cases:
+\begin{enumerate}
+\item $\rho_{k}=0$: This can only happen if column $\mathbf{A}_{k}$ is
+linearly dependent on the other columns, i.e. matrix $\mathbf{Q}^{(k)}$
+would become singular. Variable $k$ must not be added to the active
+set, because it cannot contribute to improving the solution. We express
+this by setting
+\begin{equation}
+\gamma=1\label{eq:gamma-rho-is-zero}
+\end{equation}
+
+\item $\rho_{k}>0$: This implies $c_{k}-\gamma\left(c_{k}-\rho_{k}\right)\ge0$,
+but I have no idea why??? . We can therefore drop the absolute value
+sign on the right hand side and solve for $\gamma$ which gives
+\begin{eqnarray}
+\gamma & = & \frac{C-c_{k}}{C-c_{k}+\rho_{k}}\nonumber \\
+ & = & \begin{cases}
+\frac{1}{1+\frac{\rho_{k}}{C-c_{k}}} & \mbox{ if }C-c_{k}\ne0\\
+0 & \mbox{ if }C-c_{k}=0
+\end{cases}\label{eq:gamma-rho-above-zero}
+\end{eqnarray}
+Since $\left|C\right|\ge\left|c_{k}\right|$ (proof???), the second
+form of the solution tells us that $\gamma$ is always in the range
+$0\le\gamma<1$. The case $\gamma=0$ can actually happen in practice
+when $\mathbf{A}_{k}$ is orthogonal to the other axes. For example,
+suppose $\mathbf{A}=\mathbf{I}$ (the unit matrix) and $\mathbf{b}=\mathbf{1}$
+(a vector of ones). Then all variables will enter the active set at
+$\lambda=0$. The solution path is therefore $\tilde{\mathbf{x}}\left(\lambda_{1}\right)=...=\tilde{\mathbf{x}}\left(\lambda_{n}\right)=\mathbf{0}$
+and $\tilde{\mathbf{x}}\left(\lambda_{n+1}\right)=\tilde{\mathbf{x}}\left(\lambda\rightarrow\infty\right)=\mathbf{1}$. 
+\item $\rho_{k}<0$: This implies $c_{k}-\gamma\left(c_{k}-\rho_{k}\right)<0$,
+but I have no idea why??? This gives the solution
+\begin{eqnarray}
+\gamma & = & \frac{C+c_{k}}{C+c_{k}-\rho_{k}}\nonumber \\
+ & = & \begin{cases}
+\frac{1}{1-\frac{\rho_{k}}{C+c_{k}}} & \mbox{ if }C+c_{k}\ne0\\
+0 & \mbox{ if }C+c_{k}=0
+\end{cases}\label{eq:gamma-rho-below-zero}
+\end{eqnarray}
+The remarks for case 2 apply analogously. In fact, we would get back
+to case 2 when $\mathbf{A}_{k}$ were replaced with $-\mathbf{A}_{k}$
+in $\mathbf{A}$, since this would simply change the signs of $c_{k}$
+and $\rho_{k}$.
+\end{enumerate}
+Once we determined $\gamma$, the point where variable $k$ enters
+the active set is computed according to (\ref{eq:path-vector}). Ths
+formula along with (\ref{eq:gamma-rho-is-zero}-\ref{eq:gamma-rho-below-zero})
+replace formulas (2.13) and (2.14) in \cite{efron-04-least}. In order
+to determine \emph{which} variable should enter the active set next,
+i.e. which variable should be moved to position $k$, we simply compute
+$\gamma$ for all $(n-k+1)$ candidate variables and choose the one
+with \emph{smallest} $\gamma$. This is equivalent to saying that
+we choose the variable which leads to the \emph{smallest angle} in
+the equal angle condition, which is the origin of the name ``Least
+Angle Regression'' for the method. why is this choice correct???
+
+
+\subsection{The Incremental LARS Algorithm}
